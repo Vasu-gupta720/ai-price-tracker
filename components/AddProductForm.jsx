@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState } from 'react'
-import { Input } from "./input";
-import { Button } from "./button";
+import { Loader2 } from "lucide-react";
+import { Input } from "./ui/input";
+import { Button } from "./ui/button";
 
 const AddProductForm = ({user}) => {
   const [url , setUrl] = useState("");
@@ -13,7 +14,7 @@ const AddProductForm = ({user}) => {
     e.preventDefault();
 
     if (!user) {
-      setShowAuthModal(true);
+      window.alert("Please sign in to track products.");
       return;
     }
 

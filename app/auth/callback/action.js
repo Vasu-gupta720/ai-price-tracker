@@ -1,6 +1,5 @@
 "use server";
 import { createClient } from "@/utils/supabase/server";
-import { scrapeProduct } from "@/lib/firecrawl";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -28,6 +27,7 @@ export async function addProduct(formData){
       return {error : "User not authenticated"};
     }
 
+    const { scrapeProduct } = await import("@/lib/firecrawl");
     const productData = await scrapeProduct(url);
 
     if(!productData.productName || !productData.currentPrice){
@@ -48,8 +48,8 @@ export async function addProduct(formData){
           user_id: user.id,
           url,
           name : productData.productName,
-          current_price : newPrice,
-          currency_code : currency,
+          curr_price : newPrice,
+          currency : currency,
           image_url : productData.productImageUrl,
           updated_at : new Date().toISOString(),
         },
@@ -66,21 +66,85 @@ export async function addProduct(formData){
       return {error : "Failed to add product"};
     }
 
-    const shouldAddHistory = !isUpdate || (existingProduct.current_price !== newPrice);
+    const shouldAddHistory = !isUpdate || (existingProduct.curr_price !== newPrice);
     
     if(shouldAddHistory){
       await supabase.from("price_history").insert({
         product_id : data.id,
         price : newPrice,
-        currency_code : currency,
-        
+        currency : currency,
+        checked_at : new Date().toISOString(),
       });
     }
 
     revalidatePath("/");
-    return {success : true, product : data};
+    return {
+      success : true,
+      product: data,
+      message:  isUpdate ? "Product updated successfully" : "Product added successfully"
+    };
   } catch(error){
-    console.error('Error scraping product:', error);
-    return {error : "Failed to scrape product data"};
+    console.error('Error in addProduct:', error);
+    return {error : error.message || "Failed to scrape product data"};
   }
 } 
+
+export async function deleteProduct(productId){
+
+  try{
+    const supabase = await createClient();
+
+    const {error} = await supabase
+      .from("products")
+      .delete()
+      .eq("id", productId);
+
+    if(error){
+      console.error("Error deleting product:", error);
+      return {error : "Failed to delete product"};
+    }
+
+    revalidatePath("/");
+    return {success : true, message : "Product deleted successfully"};
+  } catch(error){
+    return {error : error.message || "Failed to delete product"};
+  }
+
+}
+
+export async function getProduct(){
+
+  try{
+    const supabase = await createClient();
+
+    const {data, error} = await supabase
+      .from("products")
+      .select("*")
+      .order("created_at" , {ascending : false});
+
+    if(error) throw error;
+    return data || [];
+    } catch (error){
+      console.error("Error fetching products:", error);
+      return [];
+    }
+  }
+
+  export async function getPriceHistory(productId){
+    try{
+      const supabase = await createClient();
+
+      const {data, error} = await supabase
+        .from("price_history")
+        .select("*")
+        .eq("product_id", productId)
+        .order("checked_at" , {ascending : false});
+      
+      if(error) throw error;
+      return data || [];
+
+    } catch (error){
+      console.error("Error fetching price history:", error);
+      return [];
+    }
+  }

@@ -4,22 +4,37 @@ import React, { useState } from 'react'
 import { Loader2 } from "lucide-react";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
+import { addProduct } from "@/app/auth/callback/action";
+import { toast } from "sonner";
+import { AuthModel } from "./AuthModel";
 
 const AddProductForm = ({user}) => {
   const [url , setUrl] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showAuthModal , setShowAuthModal] = useState(false);
 
   
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!user) {
-      window.alert("Please sign in to track products.");
+      setShowAuthModal(true);
       return;
     }
 
     setLoading(true);
     // Add product logic here
+    const formData =  new FormData();
+    formData.append("url", url);
+
+    const result = await addProduct(formData);
+
+    if(result.error){
+      toast.error(result.error);
+    }else{
+      toast.success(result.message || "Product added successfully");
+      setUrl("");
+    }
     setLoading(false);
   };
 
@@ -51,6 +66,9 @@ const AddProductForm = ({user}) => {
           </Button>
       </div>
     </form>
+
+      {/* {Auth Modal} */}
+      <AuthModel isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
     </>
   )
   

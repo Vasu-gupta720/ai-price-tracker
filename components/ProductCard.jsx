@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, Trash2 } from "lucide-react";
+import { ExternalLink, Trash2, ChartLine } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -38,6 +38,7 @@ export default function ProductCard({ product }) {
 
   const [deleting, setDeleting] = useState(false);
   const [priceHistory, setPriceHistory] = useState([]);
+  const [showChart, setShowChart] = useState(false);
 
   useEffect(() => {
     async function fetchHistory() {
@@ -88,8 +89,31 @@ export default function ProductCard({ product }) {
           </p>
         </div>
 
-        {/* Price History Chart */}
-        <PriceChart priceHistory={priceHistory} currency={product.currency} />
+        {/* Price Chart Toggle Button */}
+        <Button
+          variant={showChart ? "default" : "outline"}
+          size="sm"
+          className={`w-full gap-2 transition-all ${
+            showChart
+              ? "bg-orange-500 hover:bg-orange-600 text-white"
+              : "border-orange-300 text-orange-600 hover:bg-orange-50"
+          }`}
+          onClick={() => setShowChart(!showChart)}
+        >
+          <ChartLine className="h-4 w-4" />
+          {showChart ? "Hide Price Chart" : "Show Price Chart"}
+        </Button>
+
+        {/* Collapsible Price Chart */}
+        <div
+          className="overflow-hidden transition-all duration-300 ease-in-out"
+          style={{
+            maxHeight: showChart ? "300px" : "0px",
+            opacity: showChart ? 1 : 0,
+          }}
+        >
+          <PriceChart priceHistory={priceHistory} currency={product.currency} />
+        </div>
 
         <div className="flex gap-2">
           <a
@@ -115,3 +139,4 @@ export default function ProductCard({ product }) {
     </Card>
   );
 }
+

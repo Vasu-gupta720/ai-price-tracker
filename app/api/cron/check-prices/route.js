@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+import { scrapeProduct } from "@/lib/firecrawl";
+import { sendPriceDropAlert } from "@/lib/email";
 
-export async  function POST(request) {
-    try{
-        const authHeader = request.headers.get("Authorization")
-         const cronSecret = process.env.CRON_SECRET;
+export async function POST(request) {
+  try {
+    const authHeader = request.headers.get("Authorization");
+    const cronSecret = process.env.CRON_SECRET;
 
     if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -12,19 +15,19 @@ export async  function POST(request) {
     // Use service role to bypass RLS
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    );   
+      process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE
+    );
 
     // get all products to track
     const {
-        data: products,
-        error: productsError,
+      data: products,
+      error: productsError,
     } = await supabase
-        .from("products")
-        .select("*");
+      .from("products")
+      .select("*");
 
     if (productsError) {
-        throw productsError;
+      throw productsError;
     }
 
     console.log(`Found ${products.length} products to check`);
@@ -37,7 +40,7 @@ export async  function POST(request) {
       alertsSent: 0,
     };
 
-     for (const product of products) {
+    for (const product of products) {
       try {
         const productData = await scrapeProduct(product.url);
 
@@ -47,12 +50,12 @@ export async  function POST(request) {
         }
 
         const newPrice = parseFloat(productData.currentPrice);
-        const oldPrice = parseFloat(product.current_price);
+        const oldPrice = parseFloat(product.curr_price);
 
         await supabase
           .from("products")
           .update({
-            current_price: newPrice,
+            curr_price: newPrice,
             currency: productData.currencyCode || product.currency,
             name: productData.productName || product.name,
             image_url: productData.productImageUrl || product.image_url,
@@ -112,3 +115,4 @@ export async function GET() {
     message: "Price check endpoint is working. Use POST to trigger.",
   });
 }
+
